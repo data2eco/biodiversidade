@@ -1,0 +1,29 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# --- dbt ---
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+
+# --- Configurações Locais e Credenciais (IMPORTANTE) ---
+# O dbt procura o profiles.yml na pasta ~/.dbt/ por padrão,
+# mas se vocês colocarem na pasta do projeto por facilidade, IGNREM-O.
+profiles.yml
+secrets.json
+
+# --- Dados (Nunca commitar dados no Git) ---
+*.csv
+*.parquet
+*.json
+data/
+raw_data/
+
+# --- IDE/OS ---
+.DS_Store
+.vscode/
+.idea/
