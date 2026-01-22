@@ -21,18 +21,48 @@ A métrica principal é a **Variação da Riqueza de Espécies por Década**.
 O projeto segue uma arquitetura moderna de dados (ELT):
 
 1.  **Ingestão (Extract):** Scripts Python que consomem a API de busca do GBIF com paginação e salvam os dados brutos.
-2.  **Armazenamento (Load):** Dados carregados em *Data Warehouse* (Postgres/BigQuery).
+2.  **Armazenamento (Load):** Dados carregados em Data Warehouse (DuckDB/Postgres).
 3.  **Transformação (Transform):** Uso de **dbt** (data build tool) seguindo a arquitetura medalhão:
     * **Bronze:** Dados brutos tipados.
     * **Silver:** Limpeza de coordenadas nulas, filtros taxonômicos e deduplicação.
     * **Gold:** Agregações por década e cálculo das variações percentuais.
 
 ## Como reproduzir
-1.  Clone o repositório.
-2.  Instale as dependências: `pip install -r requirements.txt`.
-3.  Configure seu `profiles.yml` do dbt.
-4.  Execute a ingestão: `python scripts/extract_gbif.py`.
-5.  Execute as transformações: `dbt run`.
+
+### 1. Preparação do Ambiente
+Garanta que você tem o Python instalado. Clone o repositório, ative seu ambiente virtual e instale as dependências:
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Execução da Ingestão (Extract)
+O script de ingestão (`scripts/extract_gbif.py`) suporta diferentes modos de operação:
+
+* **Modo Automático (Padrão):**
+  Baixa todo o histórico definido no escopo (2000 a 2023) e salva apenas em Parquet.
+  ```bash
+  python scripts/extract_gbif.py
+  ```
+
+* **Modo Personalizado (Anos Específicos):**
+  Baixa apenas os anos solicitados via argumento.
+  ```bash
+  python scripts/extract_gbif.py --years 2022 2023
+  ```
+
+* **Modo Visual (Gerar Excel):**
+  Adicione a flag `--excel` para gerar também arquivos `.xlsx` para conferência manual (útil para stakeholders não-técnicos).
+  ```bash
+  python scripts/extract_gbif.py --years 2023 --excel
+  ```
+
+### 3. Transformação (Transform)
+*Etapa em configuração.*
+1. Configure seu `profiles.yml` do dbt.
+2. Execute as transformações e testes:
+   ```bash
+   dbt run
+   ```
 
 ---
-**Status do projeto:** Em desenvolvimento ativo (Fase de ingestão).
+**Status do projeto:** Ingestão concluída. Iniciando modelagem de dados.
