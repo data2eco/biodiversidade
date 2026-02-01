@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 venv/
 .env
+.venv
 
 # --- dbt ---
 dbt_project/target/
