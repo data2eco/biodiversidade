@@ -1,6 +1,0 @@
-requests
-pandas
-pyarrow
-fastparquet
-openpyxl
-inputimeout

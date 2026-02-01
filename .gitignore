@@ -27,3 +27,11 @@ raw_data/
 .DS_Store
 .vscode/
 .idea/
+
+# --- Caches --- 
+.mypy_cache/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.eggs/
