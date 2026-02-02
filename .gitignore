@@ -35,4 +35,4 @@ raw_data/
 *.egg-info/
 dist/
 build/
-.eggs/
+.eggs/.env

@@ -6,31 +6,39 @@ Este documento rastreia o progresso do pipeline de dados para a análise de biod
 
 ---
 
-## 📅 Fase 1: Configuração e Planeamento (Dias 1-2)
+## Fase 1: Configuração e Planeamento (Dias 1-2)
 *Foco: Infraestrutura e Definições*
 
-- [ ] **Configuração do Repositório**
-    - [x] Criar repositório no GitHub e definir proteção da branch `main`.
-    - [ ] Criar ficheiro `.gitignore` (Python, dbt, OS).
-    - [ ] Criar estrutura de pastas (`scripts/`, `dbt_project/`).
-- [ ] **Definição de Escopo de Dados**
-    - [ ] Validar filtros da API GBIF: `familyKey` (Apidae), `country` (BR), `year` (2000-2023).
+- [x] **Configuração do Repositório e ambiente virtual**
+    - [x] Criar repositório no GitHub e definir proteção da branch `main`
+    - [x] Criar ficheiro `.gitignore` (Python, dbt, OS)
+    - [x] Criar estrutura de pastas (`scripts/`, `dbt_project/`)
+    - [x] Configurar gerenciador de pacote uv
+    - [x] Configurar linter/formater ruff
+
+- [x] **Definição de Escopo de Dados**
+    - [x] Validar filtros da API GBIF: `familyKey` (Apidae), `country` (BR), `year` (2000-2023).
+
+- [ ] **Infraestrutura Local (Docker)**
+    - [x] Configurar `docker-compose.yml` com Postgres e LocalStack (S3).
+    - [x] Criar script de inicialização do bucket (`init-aws/create_bucket.sh`).
+    - [x] Configurar variáveis de ambiente (`.env`) para credenciais fictícias e endpoints.
+
 - [ ] **Configuração dbt**
-    - [ ] `dbt init` do projeto.
-    - [ ] Configurar `profiles.yml` para conexão ao Data Warehouse (Postgres/BigQuery).
+    - [x] `dbt init` do projeto.
+    - [ ] Configurar `profiles.yml` para conexão ao Postgres (Docker).
 
----
-
-## 🚜 Fase 2: Ingestão de Dados (Responsável: Pessoa A)
+## Fase 2: Ingestão de Dados (Responsável: Pessoa A)
 *Foco: Extração (Extract) e Carregamento (Load)*
 
 - [ ] **Script de Extração (Python)**
     - [ ] Implementar paginação na API de Busca do GBIF (`offset`/`limit`).
-    - [ ] Adicionar tratamento de erros e *retries* para falhas de conexão.
-    - [ ] Salvar dados brutos em formato intermédio (Parquet/CSV) localmente.
+    - [ ] Configurar cliente `boto3` para conectar ao LocalStack.
+    - [ ] Salvar dados brutos em formato Parquet diretamente no bucket S3 (`s3://data2eco-raw-data`).
+
 - [ ] **Carregamento no Warehouse**
-    - [ ] Criar tabela `raw_gbif_occurrences` no banco de dados.
-    - [ ] Carregar dados do ficheiro local para a tabela `raw`.
+    - [ ] Criar tabela `raw_gbif_occurrences` no Postgres.
+    - [ ] Implementar comando `COPY` ou script para carregar do S3 para o Postgres.
 
 ---
 
@@ -38,8 +46,9 @@ Este documento rastreia o progresso do pipeline de dados para a análise de biod
 *Foco: Transformação e Limpeza*
 
 - [ ] **Camada Bronze (dbt)**
-    - [ ] Criar `models/staging/sources.yml` (Definição da source).
+    - [ ] Criar `models/staging/sources.yml` (Definição da source Postgres).
     - [ ] Criar `stg_gbif_occurrences.sql` (Tipagem de dados, renomeação de colunas).
+
 - [ ] **Camada Silver (dbt)** - *Responsável: Pessoa B*
     - [ ] Filtrar registos sem coordenadas (`lat`/`long` nulos).
     - [ ] Filtrar registos de baixa precisão ou categorias indesejadas (ex: Fósseis).
