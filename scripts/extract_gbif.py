@@ -2,8 +2,8 @@ import time
 
 import pandas as pd
 import requests
-import s3_manager
 
+import scripts.s3_manager as s3_manager
 from scripts.logger import setup_logger
 
 # Configuração do Logger

@@ -6,6 +6,7 @@ venv/
 .env
 .venv
 
+
 # --- dbt ---
 dbt_project/target/
 dbt_project/dbt_packages/
@@ -36,3 +37,7 @@ raw_data/
 dist/
 build/
 .eggs/.env
+
+# -- Local logs --
+
+logs/
