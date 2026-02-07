@@ -1,11 +1,13 @@
-import argparse
-import os
-import sys
 import time
 
 import pandas as pd
 import requests
-from inputimeout import TimeoutOccurred, inputimeout
+import s3_manager
+
+from scripts.logger import setup_logger
+
+# Configuração do Logger
+logger = setup_logger(__name__)
 
 # --- Configurações Globais ---
 # Família Apidae (abelhas) = 4334
@@ -14,79 +16,121 @@ BASE_URL = "https://api.gbif.org/v1/occurrence/search"
 TAXON_KEY = 4334
 COUNTRY = "BR"
 PAGE_SIZE = 300  # Limite máximo seguro por página síncrona
-OUTPUT_DIR = "data/raw"
 START_YEAR = 2000
 END_YEAR = 2023
 
 
-def setup_directories():
-    """Cria o diretório de saída se não existir."""
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
-        print(f"[sistema] Diretório '{OUTPUT_DIR}' verificado/criado.")
+def construct_default_params(offset: int, year: int) -> dict:
+    """
+    Constrói o dicionário de parâmetros para a consulta na API do GBIF.
+
+    Args:
+        offset (int): O índice de deslocamento (offset) para paginação.
+        year (int): O ano de filtro para a busca.
+
+    Returns:
+        dict: Um dicionário contendo os parâmetros configurados (familyKey, country, limit, etc).
+    """
+    return {
+        "familyKey": TAXON_KEY,
+        "country": COUNTRY,
+        "year": year,
+        "limit": PAGE_SIZE,
+        "offset": offset,
+        "hasCoordinate": "true",  # Apenas dados com lat/long
+        "hasGeospatialIssue": "false",
+    }
 
 
-def fetch_data_by_year(year):
-    """Busca dados de um ano específico lidando com paginação da API."""
-    offset = 0
+def fetch_gbif_data(params: dict, base_url: str = BASE_URL) -> dict:
+    """
+    Executa a requisição HTTP GET contra a API do GBIF.
+
+    Args:
+        params (dict): Dicionário de parâmetros de consulta (query string).
+        base_url (str, optional): URL base da API. Defaults to BASE_URL.
+
+    Returns:
+        dict: O JSON de resposta da API convertido para dicionário Python.
+
+    Raises:
+        requests.exceptions.RequestException: Se houver erro na requisição HTTP.
+    """
+    response = requests.get(base_url, params=params, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
+def fetch_data_by_year(year: int) -> list:
+    """
+    Busca todos os registros de ocorrência para um ano específico,
+    lidando automaticamente com a paginação da API.
+
+    Args:
+        year (int): O ano para o qual os dados serão buscados.
+
+    Returns:
+        list: Uma lista de dicionários, onde cada dicionário é um registro de ocorrência.
+    """
     end_of_records = False
     all_records = []
 
-    print(f"--- Iniciando extração para o ano {year} ---")
+    logger.info(f"Iniciando extração para o ano {year}")
 
     while not end_of_records:
-        params = {
-            "familyKey": TAXON_KEY,
-            "country": COUNTRY,
-            "year": year,
-            "limit": PAGE_SIZE,
-            "offset": offset,
-            "hasCoordinate": "true",  # Apenas dados com lat/long
-            "hasGeospatialIssue": "false",
-        }
+        # O offset é baseado na quantidade de registros já coletados
+        offset = len(all_records)
+        params = construct_default_params(offset, year)
 
         try:
-            response = requests.get(BASE_URL, params=params, timeout=30)
-            response.raise_for_status()
-            data = response.json()
-
+            data = fetch_gbif_data(params)
             results = data.get("results", [])
             all_records.extend(results)
 
-            # Controle de paginação
+            # Controle de paginação fornecido pela API
             end_of_records = data.get("endOfRecords")
             count = len(results)
 
-            # Se vier vazio, forçamos o fim
+            # Se a lista de resultados vier vazia, forçamos o fim da iteração
             if count == 0:
                 end_of_records = True
 
-            # Feedback visual simples (um ponto por página pra não poluir o terminal)
-            sys.stdout.write(".")
-            sys.stdout.flush()
+            # Log de progresso (substituto visual dos pontos)
+            logger.info(
+                f"Ano {year}: Baixados +{count} registros (Total parcial: {len(all_records)})"
+            )
 
-            offset += PAGE_SIZE
-
-            # Gentileza com a API (para evitar rate limiting)
+            # Pausa para evitar rate limiting da API
             time.sleep(0.3)
 
         except Exception as e:
-            print(f"\n[erro] Falha na requisição: {e}")
+            logger.error(
+                f"Falha na requisição para o ano {year} (offset {offset}): {e}"
+            )
             break
 
-    print(f"\n[concluido] Ano {year}: {len(all_records)} registros baixados.")
+    logger.info(f"Concluído ano {year}: {len(all_records)} registros baixados.")
     return all_records
 
 
-def save_data(records, year, export_excel=False):
-    """Salva os dados em Parquet (padrão) e opcionalmente em Excel."""
+def save_data(records: list, year: int) -> None:
+    """
+    Processa e salva os registros brutos no Data Lake (S3) em formato Parquet.
+
+    A função seleciona colunas específicas de interesse e converte tipos básicos
+    antes de enviar para o S3 via módulo s3_manager.
+
+    Args:
+        records (list): Lista de registros (dicionários) retornados pela API.
+        year (int): Ano correspondente aos dados, usado para nomear o arquivo.
+    """
     if not records:
-        print(f"[aviso] Nenhum dado encontrado para {year}.")
+        logger.warning(f"Nenhum dado encontrado para {year}.")
         return
 
     df = pd.DataFrame(records)
 
-    # Selecionando colunas úteis para reduzir tamanho do arquivo
+    # Selecionando colunas de interesse para reduzir tamanho e complexidade
     cols_interest = [
         "key",
         "scientificName",
@@ -101,94 +145,26 @@ def save_data(records, year, export_excel=False):
         "basisOfRecord",
     ]
 
-    # Garante que só pegamos colunas que realmente vieram na resposta
+    # Garante que só pegamos colunas que realmente existem no DataFrame
     existing_cols = [c for c in cols_interest if c in df.columns]
     df = df[existing_cols]
 
-    # Garante tipo numérico para o ano
+    # Garante tipo numérico para o ano para consistência
     if "year" in df.columns:
         df["year"] = pd.to_numeric(df["year"], errors="coerce")
 
-    # 1. Salvar Parquet (Sempre)
-    parquet_path = f"{OUTPUT_DIR}/gbif_apidae_br_{year}.parquet"
-    df.to_parquet(parquet_path, index=False)
-    print(f"[arquivo] Parquet salvo: {parquet_path}")
+    # Define o caminho no S3 (particionamento lógico por nome de arquivo/pasta)
+    file_name = f"{year}/gbif_apidae_br.parquet"
 
-    # 2. Salvar Excel (Opcional)
-    if export_excel:
-        excel_path = f"{OUTPUT_DIR}/gbif_apidae_br_{year}.xlsx"
-        print(f"[processando] Gerando Excel para {year} (pode demorar)...")
-        df.to_excel(excel_path, index=False)
-        print(f"[arquivo] Excel salvo: {excel_path}")
+    logger.info(f"Enviando {len(df)} registros para S3: {file_name}")
+    s3_manager.upload_dataframe_to_s3(df, file_name)
 
 
 if __name__ == "__main__":
-    # Configuração de argumentos de linha de comando
-    parser = argparse.ArgumentParser(description="Script de Ingestão GBIF - Data2Eco")
-    parser.add_argument(
-        "--years", nargs="+", type=int, help="Lista de anos (ex: 2015 2020)"
-    )
-    parser.add_argument(
-        "--excel", action="store_true", help="Gera arquivo .xlsx além do parquet"
-    )
-    args = parser.parse_args()
+    logger.info(f"Iniciando carga de dados de {START_YEAR} a {END_YEAR}...")
 
-    setup_directories()
-
-    years_to_process = []
-    export_excel = args.excel
-
-    # --- Lógica Híbrida com Timeout ---
-    if args.years:
-        # 1. Modo Robô: Argumentos passados via comando
-        years_to_process = args.years
-        print(f"[modo] Argumentos detectados. Processando anos: {years_to_process}")
-
-    else:
-        # 2. Modo Interativo: Pergunta com timeout
-        print("\n" + "=" * 60)
-        print(" NENHUM ANO INFORMADO. MODO AUTOMÁTICO INICIARÁ EM 10 SEGUNDOS.")
-        print(f" Padrão: Processar de {START_YEAR} a {END_YEAR}.")
-        print(" Digite os anos desejados (ex: 2015 2018) para interromper.")
-        print("=" * 60 + "\n")
-
-        try:
-            # Tenta esperar input por 10 segundos
-            resposta = inputimeout(prompt=">> Digite agora ou aguarde: ", timeout=10)
-
-            if resposta.strip():
-                # Usuário digitou algo
-                years_to_process = [int(ano) for ano in resposta.split()]
-                print(f"[manual] Você escolheu os anos: {years_to_process}")
-            else:
-                # Usuário deu Enter vazio
-                raise TimeoutOccurred
-
-        except TimeoutOccurred:
-            # Tempo acabou
-            print("\n[timeout] Tempo esgotado! Iniciando modo automático completo.")
-            years_to_process = range(START_YEAR, END_YEAR + 1)
-
-        except ValueError:
-            print("\n[erro] Você digitou algo que não é número. Indo para o padrão.")
-            years_to_process = range(START_YEAR, END_YEAR + 1)
-
-        # Pergunta sobre Excel (só aparece se não foi timeout total)
-        if not export_excel and not args.years:
-            try:
-                resp_excel = inputimeout(
-                    prompt=">> Gerar Excel também? (s/n) [5s]: ", timeout=5
-                )
-                if resp_excel.lower() == "s":
-                    export_excel = True
-            except TimeoutOccurred:
-                print("\n[timeout] Sem resposta para Excel. Gerando apenas Parquet.")
-
-    # --- Execução Principal ---
-    print(f"\n--- Iniciando processamento de {len(years_to_process)} ano(s) ---\n")
-
-    for year in years_to_process:
+    for year in range(START_YEAR, END_YEAR + 1):
         records = fetch_data_by_year(year)
-        save_data(records, year, export_excel=export_excel)
+        save_data(records, year)
 
-    print("\n--- Processo finalizado com sucesso ---")
+    logger.info("Carga completa finalizada")
