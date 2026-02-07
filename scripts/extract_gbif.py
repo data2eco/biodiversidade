@@ -3,8 +3,13 @@ import time
 import boto3
 import pandas as pd
 import requests
+<<<<<<< HEAD
 
 import scripts.s3_manager as s3_manager
+=======
+import s3_manager
+
+>>>>>>> 5a4f66d (feat(ingestion): adiciona suporte a S3 no localstack e logs estruturados)
 from scripts.logger import setup_logger
 
 # Configuração do Logger
