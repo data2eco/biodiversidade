@@ -3,9 +3,24 @@ import os
 import sys
 import time
 
+import boto3
 import pandas as pd
 import requests
+from botocore.exceptions import ClientError
+from dotenv import load_dotenv
 from inputimeout import TimeoutOccurred, inputimeout
+
+# load variables from your .env file
+load_dotenv()
+
+# iniciar o cliente s3 client apontando para o localstack
+s3_client = boto3.client(
+    "s3",
+    endpoint_url=os.getenv("AWS_ENDPOINT_URL", "http://localhost:4566"),
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", "test"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", "test"),
+    region_name=os.getenv("AWS_DEFAULT_REGION", "us-east-1"),
+)
 
 # --- Configurações Globais ---
 # Família Apidae (abelhas) = 4334
@@ -78,6 +93,32 @@ def fetch_data_by_year(year):
     return all_records
 
 
+def upload_to_s3(file_path, year):
+    """Garante a existência do bucket e faz o upload particionado."""
+    bucket_name = "data2eco-raw-data"
+
+    # 1. Verificação e criação automática do bucket
+    try:
+        s3_client.head_bucket(Bucket=bucket_name)
+    except ClientError as e:
+        error_code = e.response["Error"]["Code"]
+        if error_code == "404":
+            print(f"[s3] Bucket '{bucket_name}' não encontrado. Criando...")
+            s3_client.create_bucket(Bucket=bucket_name)
+        else:
+            print(f"[erro s3] Erro inesperado ao checar bucket: {e}")
+            return
+
+    # 2. Lógica de upload (hive-style partitioning)
+    s3_key = f"raw/year={year}/{os.path.basename(file_path)}"
+
+    try:
+        s3_client.upload_file(file_path, bucket_name, s3_key)
+        print(f"[s3] Sucesso: enviado para s3://{bucket_name}/{s3_key}")
+    except Exception as e:
+        print(f"[erro s3] Falha no upload: {e}")
+
+
 def save_data(records, year, export_excel=False):
     """Salva os dados em Parquet (padrão) e opcionalmente em Excel."""
     if not records:
@@ -113,6 +154,9 @@ def save_data(records, year, export_excel=False):
     parquet_path = f"{OUTPUT_DIR}/gbif_apidae_br_{year}.parquet"
     df.to_parquet(parquet_path, index=False)
     print(f"[arquivo] Parquet salvo: {parquet_path}")
+
+    # Ingestão no data lake (localstack) ---
+    upload_to_s3(parquet_path, year)
 
     # 2. Salvar Excel (Opcional)
     if export_excel:
