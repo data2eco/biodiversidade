@@ -26,15 +26,15 @@ Este documento rastreia o progresso do pipeline de dados para a análise de biod
 
 - [ ] **Configuração dbt**
     - [x] `dbt init` do projeto.
-    - [ ] Configurar `profiles.yml` para conexão ao Postgres (Docker).
+    - [x] Configurar `profiles.yml` para conexão ao Postgres (Docker).
 
 ## Fase 2: Ingestão de Dados (Responsável: Pessoa A)
 *Foco: Extração (Extract) e Carregamento (Load)*
 
-- [ ] **Script de Extração (Python)**
-    - [ ] Implementar paginação na API de Busca do GBIF (`offset`/`limit`).
-    - [ ] Configurar cliente `boto3` para conectar ao LocalStack.
-    - [ ] Salvar dados brutos em formato Parquet diretamente no bucket S3 (`s3://data2eco-raw-data`).
+- [x] **Script de Extração (Python)**
+    - [x] Implementar paginação na API de Busca do GBIF (`offset`/`limit`).
+    - [x] Configurar cliente `boto3` para conectar ao LocalStack.
+    - [x] Salvar dados brutos em formato Parquet diretamente no bucket S3 (`s3://data2eco-raw`).
 
 - [ ] **Carregamento no Warehouse**
     - [ ] Criar tabela `raw_gbif_occurrences` no Postgres.

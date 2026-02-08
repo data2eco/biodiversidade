@@ -12,7 +12,7 @@ logger = setup_logger(__name__)
 # Configurações padrão
 DEFAULT_ENDPOINT_URL = "http://localhost:4566"
 DEFAULT_REGION = "us-east-1"
-BUCKET_NAME = "data2eco-raw-data"
+BUCKET_NAME = "data2eco-raw"
 
 
 def get_s3_client():

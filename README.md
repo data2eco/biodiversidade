@@ -41,7 +41,7 @@ Este projeto utiliza docker para garantir reprodutibilidade.
 ```bash
 docker-compose up -d
 ```
-Isso iniciará o banco de dados e criará automaticamente o bucket s3 data2eco-raw-data.
+Isso iniciará o banco de dados e criará automaticamente o bucket s3 data2eco-raw.
 
 ### 2. Configuração do ambiente python
 Recomendamos o uso de um ambiente virtual (venv ou uv).

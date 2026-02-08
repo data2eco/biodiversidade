@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: stg_gbif_apidae
+    description: "Dados limpos e traduzidos de ocorrências de abelhas (Apidae) do GBIF."
+    columns:
+      - name: id_ocorrencia
+        description: "Chave primária original do GBIF."
+        tests:
+          - unique
+          - not_null
+
+      - name: nome_cientifico
+        description: "Nome científico da espécie observada."
+
+      - name: latitude
+        description: "Latitude decimal."
+
+      - name: longitude
+        description: "Longitude decimal."
+        
+      - name: data_evento
+        description: "Data em que a observação foi feita."

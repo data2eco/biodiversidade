@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: gbif
+    description: "Dados de biodiversidade do GBIF"
+    # Metadados para documentação
+    loader: S3
+
+    tables:
+      - name: apidae
+        description: "Ocorrências da família Apidae (abelhas) no Brasil"
+        # Aqui definimos o caminho físico do arquivo RAW
+        config:
+          meta:
+            external_location: 's3://data2eco-raw/*/gbif_apidae_br.parquet'
