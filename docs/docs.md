@@ -1,0 +1,6 @@
+
+### basisOfRecord
+ - **MATERIAL_CITATION** = A reference to, or citation of, one, a part of, or multiple specimens in scholarly publications, for example, a citation of a physical specimen from a scientifci collection in taxonomic treatment in a scientiufic publication or an occurrence mentioned in a field note book.
+ - **OCURRENCE** = The "Ocurrence" basis of record is a catch-all value. It means that the record is an occurence but we don't know more: the record migh be based on an observation or a preserved specimn for example but the information isn't available.
+ - **PRESERVED_SPECIMEN** = a speciment that has been preserved, for example, a plant on an herbarium shett or a cataloged lot of fish in a jar.
+ - **MATERIAL_SAMPLE** = a relatively small preserved sample of an organism, such as a feather, a tooth, or a sample of tissue, blood, or DNA taken from an organism. Note: herbarium specimens and animal mammal skins or skeletons would fit this definition, but they are usually considered preserved specimens.

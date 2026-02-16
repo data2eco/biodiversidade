@@ -34,8 +34,6 @@ renamed AS (
         DAY AS dia
     FROM
         source
-    WHERE
-        basisOfRecord = 'HUMAN_OBSERVATION'
 )
 SELECT
     *

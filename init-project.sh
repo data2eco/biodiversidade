@@ -82,31 +82,31 @@ create_bucket $BUCKET_GOLD
 # ------------------------------------------------------------------
 # 4. EXECUTAR O DBT (TRANSFORMAÇÃO)
 # ------------------------------------------------------------------
-# if [ -d "$DBT_DIR" ]; then
-#     echo -e "${BLUE}--- Iniciando dbt ---${NC}"
-#     cd "$DBT_DIR"
 
-#     # Verifica se as dependências já foram instaladas
-#     if [ ! -d "dbt_packages" ]; then
-#         echo "Instalando dependências do dbt..."
-#         uv run dbt deps
-#     fi
 
-#     # Testa a conexão (Debug)
-#     echo "Verificando conexão do dbt..."
-#     if uv run dbt debug > /dev/null 2>&1; then
-#         echo -e "${GREEN}✔ Conexão dbt OK.${NC}"
-#     else
-#         echo -e "\033[0;31m✘ Erro na conexão do dbt. Verifique o profiles.yml\033[0m"
-#         # Não sai do script, tenta rodar mesmo assim para mostrar o erro real
-#     fi
+if [ -d "$DBT_DIR" ]; then
+    echo -e "${BLUE}--- Iniciando dbt ---${NC}"
+    cd "$DBT_DIR"
 
-#     echo "Rodando modelos dbt..."
-#     uv run dbt run
+    # Verifica se as dependências já foram instaladas
+    if [ ! -d "dbt_packages" ]; then
+        echo "Instalando dependências do dbt..."
+        uv run dbt deps
+    fi
 
-#     cd ..
-# else
-#     echo -e "\033[0;31mERRO: Pasta '$DBT_DIR' não encontrada.\033[0m"
-# fi
+    # Testa a conexão (Debug)
+    echo "Verificando conexão do dbt..."
+    if uv run dbt debug > /dev/null 2>&1; then
+        echo -e "${GREEN}✔ Conexão dbt OK.${NC}"
+    else
+        echo -e "\033[0;31m✘ Erro na conexão do dbt. Verifique o profiles.yml\033[0m"
+        # Não sai do script, tenta rodar mesmo assim para mostrar o erro real
+    fi
 
-# echo -e "${BLUE}=== PROCESSO FINALIZADO ===${NC}"
+    echo "Rodando modelos dbt..."
+    uv run dbt run
+
+    cd ..
+else
+    echo -e "\033[0;31mERRO: Pasta '$DBT_DIR' não encontrada.\033[0m"
+fi

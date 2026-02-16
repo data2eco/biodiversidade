@@ -29,11 +29,11 @@ models:
     # Configurações para a pasta 'staging' (Camada Silver)
     staging:
       +materialized: external
-      +meta:
-        format: parquet
-    marts:
+      +format: parquet
+      +meta: {}
+    mart:
       +materialized: external
-      +meta:
-        format: parquet
+      +format: parquet
+      +meta: {}
 flags:
   require_generic_test_arguments_property: true
