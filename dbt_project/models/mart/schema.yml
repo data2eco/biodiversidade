@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: gold_biodiversity_trends
+    description: >
+      Camada Gold com métricas de riqueza de espécies de abelhas (Apidae) no Brasil,
+      agregadas por estado e comparadas entre os períodos 2000-2010 e 2011-2023.
+      Utilizada para análise da variação de biodiversidade de polinizadores em
+      regiões produtoras de café.
+
+    columns:
+      - name: estado
+        description: Nome do estado brasileiro (stateProvince do GBIF).
+        tests:
+          - not_null:
+              config:
+                severity: error
+          - unique:
+              config:
+                severity: error
+
+      - name: riqueza_2000_2010
+        description: >
+          Contagem de espécies distintas (COUNT DISTINCT de nome_cientifico)
+          registradas no período 2000-2010.
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: riqueza_2011_2023
+        description: >
+          Contagem de espécies distintas (COUNT DISTINCT de nome_cientifico)
+          registradas no período 2011-2023.
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: variacao_percentual
+        description: >
+          Variação percentual da riqueza de espécies entre os dois períodos.
+          Calculada como: (riqueza_2011_2023 - riqueza_2000_2010) * 100 / riqueza_2000_2010.
+          Valores negativos indicam declínio; positivos indicam crescimento.
+          NULL quando riqueza_2000_2010 = 0 (sem registro no período base).
